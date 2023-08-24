@@ -1,6 +1,8 @@
 # 3rd Party
 from pathlib import Path
 
+import zipfile
+
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
@@ -13,7 +15,6 @@ from synthcity.plugins import Plugins
 from synthcity.plugins.core.dataloader import GenericDataLoader
 
 generators = Plugins()
-
 
 def evaluate_baselines(data, seed):
     quality_evaluator = eval_statistical.AlphaPrecision()
@@ -31,15 +32,17 @@ def evaluate_baselines(data, seed):
 
     results = {}
 
-    for model in ["nflow", "ctgan", "tvae", "bayesian_network", "copulagan"]:
+    for model in ["bayesian_network"]: #, "ctgan", "tvae", "nflow"]:
+
         gen = generators.get(model, device="cpu")
         gen.fit(X_train)
-        X_synth = gen.generate(count=X_test.shape[0])
+        X_synth = gen.generate(count=X_test.shape[0]).dataframe()
 
         X_test_loader = GenericDataLoader(
             X_test,
             target_column="target",
         )
+
         X_synth_loader = GenericDataLoader(
             X_synth,
             target_column="target",
@@ -60,8 +63,8 @@ def evaluate_baselines(data, seed):
         )
         det_score = np.mean([xgb_det["mean"], gmm_det["mean"], mlp_det["mean"]])
         qual_score = np.mean(list(naive_data_qual.values()))
-
-        results[model] = [gt_perf, synth_perf, det_score, qual_score]
+        
+        results[model] = [qual_score, gt_perf, synth_perf, gt_perf - synth_perf, det_score]
 
     return results
 
@@ -69,20 +72,49 @@ def evaluate_baselines(data, seed):
 if __name__ == "__main__":
 
     dataset = "breast"
-    data_path = Path("src/goggle/exps/data/breast_cancer_2.csv").resolve()
-
-    X = pd.read_csv(data_path)
+    X = pd.read_csv("../data/breast_cancer.csv", header=None)
 
     ind = list(range(len(X.columns)))
-    ind = [x for x in ind if x != X.columns.get_loc("target")]
+    ind = [x for x in ind if x != X.columns.get_loc(1)]
+
     col_list = X.columns[ind]
+
     ct = ColumnTransformer(
         [("scaler", StandardScaler(), col_list)], remainder="passthrough"
     )
 
     X_ = ct.fit_transform(X)
-    X = pd.DataFrame(X_, index=X.index, columns=X.columns)
+    X = pd.DataFrame(X_, index=X.index, columns=X.columns).drop(0, axis=1)
 
-    X.head()
+    avg_results = {}
 
-    print(evaluate_baselines(X, 0))
+    for i in range(1):
+
+        results = evaluate_baselines(X, 0)
+
+        for model in results.keys(): 
+
+            qual_score, gt_perf, synth_perf, diff, det_score = results[model]
+            
+            if model in avg_results.keys():
+                avg_results[model][0] += [qual_score]
+                avg_results[model][1] += [det_score]
+                avg_results[model][2] += [diff]
+            else: 
+                avg_results[model] = [[], [], []]
+                avg_results[model][0] += [qual_score]
+                avg_results[model][1] += [det_score]
+                avg_results[model][2] += [diff]
+
+    print(avg_results)
+    
+    for model in avg_results:
+
+        [quality, detection, utility] = avg_results[model]
+
+        print('Scores for {}: Quality {} +/- std {}'.format(model, np.mean(quality), np.std(quality)))
+        print('Scores for {}: Detection {} +/- std {}'.format(model, np.mean(detection), np.std(detection)))
+        print('Scores for {}: Utility {} +/- std {} \n'.format(model, np.mean(utility), np.std(utility)))
+
+
+

@@ -33,6 +33,24 @@ Place dataset in ```exps/data```, and see experiment notebooks with instructions
  - 2) ```exps/prior_knowledge/.``` for incorporating prior knowledge, and
  - 3) ```exps/ablation/.``` for ablation settings.
 
+Data used in this work can be dowloaded using the following links:  
+
+- 1) Adult: https://archive.ics.uci.edu/dataset/2/adult
+- 2) Breast: https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic
+- 3) Covertype: https://archive.ics.uci.edu/dataset/31/covertype
+- 4) Credit: https://archive.ics.uci.edu/dataset/144/statlog+german+credit+data
+
+Additional datasets: 
+- 5) ECOLI: 
+- 6) MAGIC-IRRI: 
+- 7) Red: https://archive.ics.uci.edu/dataset/186/wine+quality
+- 8) White: (same as red)
+- 9) Mice: https://archive.ics.uci.edu/dataset/342/mice+protein+expression
+- 10) Musk: https://datahub.io/machine-learning/musk (UCI dowload not present)
+
+
+The zip files (for Adult, Breast, Covertype, Credit, Red, White, Mice) should be unzipped in a folder named data in ```exps/```. Musk is a file and should be placed in ```exps/``` too. 
+
 ---
 
 ### Citation

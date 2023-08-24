@@ -216,6 +216,7 @@ class GoggleModel:
         return X_synth
 
     def evaluate_synthetic(self, X_synth, X_test):
+        
         quality_evaluator = eval_statistical.AlphaPrecision()
         qual_res = quality_evaluator.evaluate(X_test, X_synth)
         qual_res = {

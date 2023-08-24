@@ -3,6 +3,7 @@ import random
 
 # 3rd party
 import numpy as np
+import pandas as pd
 import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
@@ -41,3 +42,28 @@ def get_dataloader(X, batch_size, seed):
         ),
     }
     return dataloader
+
+
+def load_breast() -> pd.DataFrame:
+
+    path = "https://archive.ics.uci.edu/static/public/17/breast+cancer+wisconsin+diagnostic.zip"
+
+    names = ["id", 
+             "diagnosis",
+            "radius" ,
+            "texture" ,
+            "perimeter",
+            "area",
+            "smoothness",
+            "compactness",
+            "concavity",
+            "concave_points" ,
+            "symmetry",
+            "fractal_dimension", 
+    ]
+
+    train_df = pd.read_csv(path, names=names, index_col=False)
+    df = df.applymap(lambda x: x.strip() if type(x) is str else x)
+    df["diagnosis"].replace({'M': 1, 'B': 0}, inplace=True)
+
+    return df
