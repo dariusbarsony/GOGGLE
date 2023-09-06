@@ -72,3 +72,4 @@ cifar-10*
 tmp
 workspace
 src/goggle/exps/data/
+cache
