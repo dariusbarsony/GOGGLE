@@ -31,7 +31,7 @@ class GoggleModel:
         decoder_arch="gcn",
         graph_prior=None,
         prior_mask=None,
-        device="cpu",
+        device="cuda",
         alpha=0.1,
         beta=0.1,
         seed=42,

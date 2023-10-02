@@ -73,3 +73,5 @@ tmp
 workspace
 src/goggle/exps/data/
 cache
+*.out
+*.sh
