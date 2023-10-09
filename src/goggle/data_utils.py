@@ -7,7 +7,8 @@ import pandas as pd
 import torch
 
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler
 
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -48,7 +49,7 @@ def get_dataloader(X, batch_size, seed):
 
 
 def load_breast() -> pd.DataFrame:
-
+    
     path = "https://archive.ics.uci.edu/static/public/17/breast+cancer+wisconsin+diagnostic.zip"
 
     names = ["id", 
@@ -94,10 +95,12 @@ def load_adult() -> pd.DataFrame:
         "native-country",
         "income",
     ]
+
     train_df = pd.read_csv(path, names=names, index_col=False)
     test_df = pd.read_csv(test_path, names=names, index_col=False)[1:]
+    
     df = pd.concat([train_df, test_df])
-    df = df.applymap(lambda x: x.strip() if type(x) is str else x)
+    df = train_df.applymap(lambda x: x.strip() if type(x) is str else x)
 
     for col in df:
         if df[col].dtype == "object":
@@ -106,7 +109,6 @@ def load_adult() -> pd.DataFrame:
     df["income"].replace({'<=50K.': '<=50K', '>50K.': '>50K'}, inplace=True)
 
     return df
-
 
 def preprocess_adult(dataset: pd.DataFrame) -> pd.DataFrame:
     """Preprocess adult data set."""
@@ -226,7 +228,16 @@ def preprocess_adult(dataset: pd.DataFrame) -> pd.DataFrame:
     for row in replace:
         df = df.replace(row, range(len(row)))
 
-    df = pd.DataFrame(MinMaxScaler().fit_transform(df),
+    ind = list(range(len(df.columns)))
+
+    ind = [x for x in ind if x != df.columns.get_loc("income")]
+    col_list = df.columns[ind]
+
+    ct = ColumnTransformer(
+        [("scaler", StandardScaler(), col_list)], remainder="passthrough"
+    )
+
+    df = pd.DataFrame(ct.fit_transform(df),
                       index=df.index, columns=df.columns)
 
     return df

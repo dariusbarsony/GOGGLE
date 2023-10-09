@@ -75,3 +75,4 @@ src/goggle/exps/data/*
 cache
 *.out
 ! src/goggle/exps/data/winequality-red.csv
+*.sh
