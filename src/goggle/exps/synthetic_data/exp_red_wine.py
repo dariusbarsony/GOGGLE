@@ -7,7 +7,13 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
 from sklearn.manifold import TSNE
-import seaborn as sns
+import time
+
+import sys
+
+from bayes_opt import BayesianOptimization
+
+sys.path.append('/gpfs/home1/dbarsony/GOGGLE/src')
 
 # Goggle
 from goggle.GoggleModel import GoggleModel
@@ -16,56 +22,65 @@ from goggle.GoggleModel import GoggleModel
 from synthcity.plugins.core.dataloader import GenericDataLoader
 from synthcity.plugins import Plugins
 
-dataset = "red_wine"
-X = pd.read_csv("../data/winequality-red.csv", sep=';')
-ind = list(range(len(X.columns)))
+def run_model(fname):
+    dataset = "red_wine"
 
-ind = [x for x in ind if x != X.columns.get_loc("quality")]
-col_list = X.columns[ind]
-ct = ColumnTransformer(
-    [("scaler", StandardScaler(), col_list)], remainder="passthrough"
-)
+    X = pd.read_csv(fname, sep=';')
+    ind = list(range(len(X.columns)))
 
-X_ = ct.fit_transform(X)
-X = pd.DataFrame(X_, index=X.index, columns=X.columns)
+    ind = [x for x in ind if x != X.columns.get_loc("quality")]
+    col_list = X.columns[ind]
+    ct = ColumnTransformer(
+        [("scaler", StandardScaler(), col_list)], remainder="passthrough"
+    )
 
-X_train, X_test = train_test_split(X, random_state=0, test_size=0.2, shuffle=True)
+    X_ = ct.fit_transform(X)
+    X = pd.DataFrame(X_, index=X.index, columns=X.columns)
 
-gen = GoggleModel(
-    ds_name=dataset,
-    input_dim=X_train.shape[1],
-    encoder_dim=64,
-    encoder_l=2,
-    het_encoding=True,
-    decoder_dim=64,
-    decoder_l=2,
-    threshold=0.05,
-    decoder_arch="gcn",
-    graph_prior=None,
-    prior_mask=None,
-    device="cuda",
-    beta=0.01,
-    learning_rate=0.01,
-    seed=0,
-)
+    X_train, X_test = train_test_split(X, random_state=0, test_size=0.2, shuffle=True)
 
-gen.fit(X_train)
+    gen = GoggleModel(
+        ds_name=dataset,
+        input_dim=X_train.shape[1],
+        encoder_dim=64,
+        encoder_l=2,
+        het_encoding=True,
+        decoder_dim=64,
+        decoder_l=2,
+        threshold=0.05,
+        decoder_arch="gcn",
+        graph_prior=None,
+        prior_mask=None,
+        device="cpu",
+        beta=0.01,
+        learning_rate=0.01,
+        seed=0,
+    )
 
-X_synth = gen.sample(X_test)
+    gen.fit(X_train)
 
-X_synth_loader = GenericDataLoader(
-    X_synth,
-    target_column="quality",
-)
-X_test_loader = GenericDataLoader(
-    X_test,
-    target_column="quality",
-)
+    X_synth = gen.sample(X_test)
 
-res = gen.evaluate_synthetic(X_synth_loader, X_test_loader)
+    X_synth_loader = GenericDataLoader(
+        X_synth,
+        target_column="quality",
+    )
+    X_test_loader = GenericDataLoader(
+        X_test,
+        target_column="quality",
+    )
 
-print(f"Quality: {res[0]:.3f}")
-print(f"Detection: {res[2]:.3f}")
-print(
-    f"Performance on real: {res[1][0]:.3f}, on synth: {res[1][1]:.3f}, diff: {(res[1][0] - res[1][1]):.3f}"
-)
+    res = gen.evaluate_synthetic(X_synth_loader, X_test_loader)
+
+    print(f"Quality: {res[0]:.3f}")
+    print(f"Detection: {res[2]:.3f}")
+    print(
+        f"Performance on real: {res[1][0]:.3f}, on synth: {res[1][1]:.3f}, diff: {(res[1][0] - res[1][1]):.3f}"
+    )
+
+if __name__ == "__main__":
+
+    start = time.time()
+    fname = sys.argv[1]
+    run_model(fname)
+    print(f'Run took: {time.time() - start:.3f} seconds')

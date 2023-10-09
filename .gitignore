@@ -71,5 +71,7 @@ cifar-10*
 # GOGGLE
 tmp
 workspace
-src/goggle/exps/data/
+src/goggle/exps/data/*
 cache
+*.out
+! src/goggle/exps/data/winequality-red.csv

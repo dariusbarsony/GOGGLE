@@ -1,0 +1,1 @@
+/home/dbarsony/.conda/envs/goggle_env
