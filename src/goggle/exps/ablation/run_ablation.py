@@ -109,7 +109,7 @@ if __name__ == "__main__":
     # parser.add_argument("--datapath", type=str, default="")
     # parser.add_argument("--runs", type=int, default=10)
 
-    parser.add_argument("--weight_decay", type=int, default=1e-3)
+    parser.add_argument("--weight_decay", type=float, default=1e-3)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=5e-3)
     parser.add_argument("--epochs", type=int, default=50)
