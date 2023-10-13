@@ -241,3 +241,82 @@ def preprocess_adult(dataset: pd.DataFrame) -> pd.DataFrame:
                       index=df.index, columns=df.columns)
 
     return df
+
+def preprocess_credit(df : pd.DataFrame) -> pd.DataFrame:
+
+    replace = [
+        ['A11', 'A12', 'A13', 'A14'],
+        ['A30', 'A31','A32','A33','A34','A35'],
+        ['A40','A41','A42','A43','A44','A45','A46','A47','A48','A49','A410'],
+        ['A61','A62','A63','A64','A65'],
+        ['A71','A72','A73','A74','A75'],
+        ['A91','A92','A93','A94','A95'],
+        ['A101','A102','A103'],
+        ['A121','A122','A123','A124'],
+        ['A141','A142','A143'],
+        ['A151','A152','A153'],
+        ['A171','A172','A173','A174'],
+        ['A191','A192'],
+        ['A201','A202']
+    ]
+
+    for row in replace:
+        df = df.replace(row, range(len(row)))
+
+    ind = list(range(len(df.columns)))
+
+    ind = [x for x in ind if x != df.columns.get_loc('target')]
+    col_list = df.columns[ind]
+
+    ct = ColumnTransformer(
+        [("scaler", StandardScaler(), col_list)], remainder="passthrough"
+    )
+
+    df = pd.DataFrame(ct.fit_transform(df),
+                      index=df.index, columns=df.columns)
+
+    return df
+
+def load_credit() -> pd.DataFrame:
+
+    names = [ 
+        'status',
+        'duration',
+        'credit_history',
+        'purpose',
+        'credit_amount',
+        'savings_account',
+        'present_employment',
+        'installment_rate',
+        'personal_status',
+        'other_debtors',
+        'residence',
+        'property',
+        'age',
+        'other_installment_plans',
+        'housing',
+        'number_of_existing_credits',
+        'job',
+        'liable_people',
+        'telephone',
+        'foreign_worker',
+        'target'
+    ]
+
+    X = pd.read_csv("../data/german.data", header=None, sep=' ', names=names)
+    X = preprocess_credit(X)
+
+    X["target"] = X["target"] - 1.0
+    X = X.dropna(axis=0)
+    ind = list(range(len(X.columns)))
+    ind = [x for x in ind if x != X.columns.get_loc("target")]
+    col_list = X.columns[ind]
+
+    ct = ColumnTransformer(
+        [("scaler", StandardScaler(), col_list)], remainder="passthrough"
+    )
+
+    X_ = ct.fit_transform(X)
+    X = pd.DataFrame(X_, index=X.index, columns=X.columns)
+
+    return X
