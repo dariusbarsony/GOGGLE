@@ -17,7 +17,7 @@ from synthcity.metrics import eval_detection, eval_performance, eval_statistical
 from synthcity.plugins import Plugins
 from synthcity.plugins.core.dataloader import GenericDataLoader
 
-from goggle.data_utils import load_adult, preprocess_adult
+from goggle.data_utils import load_adult, preprocess_adult, load_credit, preprocess_credit
 
 generators = Plugins()
 
@@ -82,10 +82,13 @@ def load_dataset(dname):
            X = preprocess_adult(X)
 
            return X
+    if dname == "credit":
+        X = load_credit()
+        return preprocess_credit(X) 
     else: 
         raise ValueError('Incorrect name specified')
 
-def run_baselines(data, seed, runs):
+def run_baselines(data, seed, runs, device='cpu'):
 
     benchmarks = {'bayesian_network':{'quality':[],'detection':[], 'utility':[]}, 
                      'ctgan':{'quality':[],'detection':[], 'utility':[]},
@@ -103,9 +106,7 @@ def run_baselines(data, seed, runs):
         for model in ["bayesian_network", "ctgan", "tvae", "nflow"]:
 
             # get baseline and fit
-            gen = generators.get(model, device="cuda")
-
-            print(f"training model {model}")
+            gen = generators.get(model, device=device)
             gen.fit(X_train)
 
             # use generator to sample data
@@ -179,6 +180,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset", type=str, default="adult")
     parser.add_argument("--runs", type=int, default=10)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--device", type=str, default='cpu')
 
     args = parser.parse_args()
 
@@ -188,7 +190,7 @@ if __name__ == "__main__":
     start = time.time()
 
     X = load_dataset(args.dataset)
-    final = run_baselines(X, seed=args.seed, runs=args.runs)
+    final = run_baselines(X, seed=args.seed, runs=args.runs, device=args.device)
 
     print(f"total time for all baselines took: {time.time-start:.3f}")
     print_final(final)
