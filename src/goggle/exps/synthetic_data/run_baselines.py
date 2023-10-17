@@ -93,6 +93,8 @@ def run_baselines(data, seed, runs):
                      'nflow':{'quality':[],'detection':[], 'utility':[]}}
 
     for i in range(runs):
+        
+        print(f"Starting training run {i} ...")
 
         X_train, X_test = train_test_split(
             data, random_state=seed + 42, test_size=0.2, shuffle=False
@@ -102,6 +104,8 @@ def run_baselines(data, seed, runs):
 
             # get baseline and fit
             gen = generators.get(model, device="cuda")
+
+            print(f"training model {model}")
             gen.fit(X_train)
 
             # use generator to sample data

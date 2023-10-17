@@ -4,7 +4,7 @@ import pandas as pd
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.compose import ColumnTransformer
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 
 import time
 import argparse
@@ -15,6 +15,8 @@ sys.path.append('/gpfs/home1/dbarsony/GOGGLE/src')
 # Goggle
 from goggle.GoggleModel import GoggleModel
 from goggle.data_utils import load_adult, preprocess_adult
+
+from bayes_opt import BayesianOptimization
 
 # Synthcity
 from synthcity.plugins.core.dataloader import GenericDataLoader
@@ -52,7 +54,7 @@ def train_goggle(fname, dataset, batch_size, lr, beta, epochs, threshold, runs):
         X_ = ct.fit_transform(X)
         X = pd.DataFrame(X_, index=X.index, columns=X.columns)
         batch_size= 32
-        lr=0.01
+        lr=1e-2
         target='quality'
     if dataset =='covertype':
         X = pd.read_csv("../data/covtype.data", header=None)
@@ -73,7 +75,17 @@ def train_goggle(fname, dataset, batch_size, lr, beta, epochs, threshold, runs):
         target='income'
 
     if dataset=='musk':
-        print(dataset)
+        X = pd.read_csv(fname)
+
+        ind = list(range(len(X.columns)))
+        ind = [x for x in ind if x != X.columns.get_loc("quality")]
+        col_list = X.columns[ind]
+
+        ct = ColumnTransformer(
+            [("scaler", StandardScaler(), col_list)], remainder="passthrough")
+
+        X_ = ct.fit_transform(X)
+        X = pd.DataFrame(X_, index=X.index, columns=X.columns)
     if dataset=='ecoli':
         target = 'ftsJ'
 
@@ -95,14 +107,14 @@ def train_goggle(fname, dataset, batch_size, lr, beta, epochs, threshold, runs):
             decoder_arch="gcn",
             graph_prior=None,
             prior_mask=None,
-            device="cuda",
+            device="cpu",
             beta=beta,
             learning_rate=lr,
             seed=0,
             batch_size=batch_size,
             epochs=epochs,
         )
-        
+        print ("Fitting model")
         gen.fit(X_train)
 
         X_synth = gen.sample(X_test)
@@ -139,7 +151,58 @@ def train_goggle(fname, dataset, batch_size, lr, beta, epochs, threshold, runs):
         f"Average Performance difference on real versus synthetic (across 10 runs): {sum(avg_utility)/runs:.2f} +/- {np.std(avg_utility):.2f}"
     )
 
-    return (avg_quality, avg_detection, avg_utility)
+    # return (avg_quality, avg_detection, avg_utility)
+    return res[0]
+
+def black_box_function(batch_size, lr, alpha):
+
+    X = load_adult()
+    X = preprocess_adult(X)
+
+    X_train, X_test = train_test_split(X, random_state=0, test_size=0.2, shuffle=True)
+
+    gen = GoggleModel(
+        ds_name='adult',
+        input_dim=X_train.shape[1],
+        encoder_dim=64,
+        encoder_l=2,
+        het_encoding=True,
+        decoder_dim=64,
+        decoder_l=2,
+        threshold=0.1,
+        decoder_arch="gcn",
+        graph_prior=None,
+        prior_mask=None,
+        device="cpu",
+        beta=0.1,
+        alpha=alpha,
+        learning_rate=lr,
+        seed=0,
+        batch_size=batch_size,
+    )
+    print ("Fitting model")
+    gen.fit(X_train)
+
+    X_synth = gen.sample(X_test)
+
+    X_synth_loader = GenericDataLoader(
+        X_synth,
+        target_column="income",
+    )
+    X_test_loader = GenericDataLoader(
+        X_test,
+        target_column="income",
+    )
+
+    res = gen.evaluate_synthetic(X_synth_loader, X_test_loader)
+
+    print(f"Quality: {res[0]:.3f}")
+    print(f"Detection: {res[2]:.3f}")
+    print(
+        f"Performance on real: {res[1][0]:.3f}, on synth: {res[1][1]:.3f}, diff: {(res[1][0] - res[1][1]):.3f}"
+    )
+
+    return res[0]
 
 if __name__ == "__main__":
 
@@ -161,8 +224,21 @@ if __name__ == "__main__":
     
     start = time.time()
 
-    train_goggle(args.datapath, args.dataset, runs=args.runs, batch_size=args.batch_size, 
-              lr=args.lr, beta=args.beta, threshold=args.threshold, epochs=args.epochs)
+    grid_vals = {"batch_size":[64, 128, 512], "lr":[1e-3, 5e-3, 1e-2], "alpha":[0.1, 0.5, 1]}
+
+    # train_goggle(args.datapath, args.dataset, runs=args.runs, batch_size=args.batch_size, 
+    #           lr=args.lr, beta=args.beta, threshold=args.threshold, epochs=args.epochs)
+    X = load_adult()
+    X = preprocess_adult(X)
+
+    X_train, X_test = train_test_split(X, random_state=0, test_size=0.2, shuffle=True)
+
+    model = GoggleModel(ds_name="adult", input_dim=X_train.shape[1])
+
+    optimizer = GridSearchCV(estimator = model, param_grid=grid_vals, scoring="accuracy", cv=6, refit=True, return_train_score=True)
+    optimizer.fit()
+
+    preds = optimizer.best_estimator_.predict(X_test)
 
     print(f'Total time across runs: {time.time() - start:.3f} seconds')
 

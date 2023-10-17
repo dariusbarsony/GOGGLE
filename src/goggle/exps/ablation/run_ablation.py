@@ -54,8 +54,13 @@ def get_adj_mat(adj_type, X, n):
     
     return adj_mat
 
-def run_ablation(X, learning_rate, weight_decay, batch_size, alpha, dataset_name='credit'):
+def run_ablation(X, learning_rate, weight_decay, batch_size, alpha, beta, device='cpu', dataset_name='credit'):
     X_train, X_test = train_test_split(X, random_state=0, test_size=0.2, shuffle=True)
+
+    if dataset_name == 'credit':
+        label = 'target'
+    if dataset_name=='adult':
+        label = 'income'
 
     for adj_type in ["ER", "COV", "BN", "DENSE"]:
         print(f"\n\nConsidering ablation setting: {adj_type}")
@@ -72,8 +77,8 @@ def run_ablation(X, learning_rate, weight_decay, batch_size, alpha, dataset_name
             het_decoder=False,
             graph_prior=torch.Tensor(adj_mat),
             prior_mask=torch.ones_like(torch.Tensor(adj_mat)),
-            device="cpu",
-            beta=0.1,
+            device=device,
+            beta=beta,
             seed=0,
             learning_rate=learning_rate,
             batch_size=batch_size,
@@ -82,15 +87,16 @@ def run_ablation(X, learning_rate, weight_decay, batch_size, alpha, dataset_name
         )
 
         gen.fit(X_train)
+
         X_synth = gen.sample(X_test)
 
         X_synth_loader = GenericDataLoader(
             X_synth,
-            target_column="target",
+            target_column=label,
         )
         X_test_loader = GenericDataLoader(
             X_test,
-            target_column="target",
+            target_column=label,
         )
 
         res = gen.evaluate_synthetic(X_synth_loader, X_test_loader)
@@ -116,6 +122,7 @@ if __name__ == "__main__":
     parser.add_argument("--beta", type=float, default=0.1)
     parser.add_argument("--alpha", type=float, default=0.1)
     parser.add_argument("--threshold", type=float, default=0.1)
+    parser.add_argument("--device", type=str, default='cpu')
 
     args = parser.parse_args()
 
@@ -132,6 +139,6 @@ if __name__ == "__main__":
     
     start = time.time()
 
-    run_ablation(X, learning_rate=args.lr, weight_decay=args.weight_decay, batch_size=args.batch_size, alpha=args.alpha)
+    run_ablation(X, learning_rate=args.lr, weight_decay=args.weight_decay, batch_size=args.batch_size, alpha=args.alpha, beta=args.beta, device=args.device, dataset_name=args.dataset)
 
     print(f'Total time for ablation took: {time.time() - start:.3f} seconds')
