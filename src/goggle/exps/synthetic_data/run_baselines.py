@@ -48,26 +48,19 @@ def load_dataset(dname):
 
         return X
     if dname=='mice':
-        dataset = "mice"
-
-        le = LabelEncoder()
+        cols2skip = ['MouseID', 
+                     'Genotype', 
+                     'Treatment',
+                     'Behavior',
+        ]
 
         X = pd.read_excel("../data/Data_Cortex_Nuclear.xls")
-
-        categorical_names = ['MouseID', 
-                            'Genotype', 
-                            'Treatment',
-                            'Behavior',
-        ]
+        X.drop(labels=cols2skip, axis=1, inplace=True)
 
         ind = list(range(len(X.columns)))
         ind = [x for x in ind if x != X.columns.get_loc("class")]
 
         col_list = X.columns[ind]
-
-        for n in categorical_names:
-
-            X[n] = le.fit_transform(X[n])
 
         ct = ColumnTransformer(
             [("scaler", StandardScaler(), col_list)], remainder="passthrough"
@@ -76,7 +69,11 @@ def load_dataset(dname):
         X_ = ct.fit_transform(X)
         X = pd.DataFrame(X_, index=X.index, columns=X.columns)
 
-        return X.dropna()
+        X = X.dropna()
+        X["class"].replace({"c-CS-m": 0, "t-SC-s": 1, "c-SC-m":2, "c-CS-s":3, "c-SC-s":4, "t-CS-m":5, "t-SC-m":6, "t-CS-s":7}, inplace=True)
+
+
+        return X.astype(float)
     if dname=='adult':
            X = load_adult()
            X = preprocess_adult(X)
@@ -84,7 +81,34 @@ def load_dataset(dname):
            return X
     if dname == "credit":
         X = load_credit()
-        return preprocess_credit(X) 
+        return preprocess_credit(X)
+    if dname == "ecoli":
+        dataset = "ecoli"
+        X = pd.read_csv("../data/magic-irri_2000.csv")
+
+        ind = list(range(len(X.columns)))
+        col_list = X.columns[ind]
+        ct = ColumnTransformer(
+            [("scaler", StandardScaler(), col_list)], remainder="passthrough"
+        )
+
+        X_ = ct.fit_transform(X)
+        X = pd.DataFrame(X_, index=X.index, columns=X.columns)
+
+        return X
+    if dname == "magic":
+        X = pd.read_csv("../data/magic-irri_2000.csv")
+
+        ind = list(range(len(X.columns)))
+        col_list = X.columns[ind]
+        ct = ColumnTransformer(
+            [("scaler", StandardScaler(), col_list)], remainder="passthrough"
+        )
+
+        X_ = ct.fit_transform(X)
+        X = pd.DataFrame(X_, index=X.index, columns=X.columns)
+
+        return X
     else: 
         raise ValueError('Incorrect name specified')
 
