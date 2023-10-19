@@ -120,6 +120,8 @@ def run_baselines(data, seed, runs, device='cpu'):
                      'nflow':{'quality':[],'detection':[], 'utility':[]}}
 
     for i in range(runs):
+        
+        print(f"Starting training run {i} ...")
 
         X_train, X_test = train_test_split(
             data, random_state=seed + 42, test_size=0.2, shuffle=False
