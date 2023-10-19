@@ -123,6 +123,8 @@ if __name__ == "__main__":
     parser.add_argument("--alpha", type=float, default=0.1)
     parser.add_argument("--threshold", type=float, default=0.1)
     parser.add_argument("--device", type=str, default='cpu')
+    parser.add_argument("--runs", type=int, default=10)
+
 
     args = parser.parse_args()
 
@@ -139,6 +141,7 @@ if __name__ == "__main__":
     
     start = time.time()
 
-    run_ablation(X, learning_rate=args.lr, weight_decay=args.weight_decay, batch_size=args.batch_size, alpha=args.alpha, beta=args.beta, device=args.device, dataset_name=args.dataset)
+    for i in range(args.runs):
+        run_ablation(X, learning_rate=args.lr, weight_decay=args.weight_decay, batch_size=args.batch_size, alpha=args.alpha, beta=args.beta, device=args.device, dataset_name=args.dataset)
 
     print(f'Total time for ablation took: {time.time() - start:.3f} seconds')
